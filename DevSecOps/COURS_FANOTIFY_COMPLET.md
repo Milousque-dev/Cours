@@ -472,37 +472,37 @@ int main(void)
 ## 2.1 Qu'est-ce que fanotify ?
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           QU'EST-CE QUE FANOTIFY ?                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  fanotify = "File Access NOTIFication"                                      │
-│                                                                             │
-│  C'est une API du noyau Linux (depuis 2.6.37) qui permet à un programme     │
-│  en espace utilisateur de :                                                 │
-│                                                                             │
-│  1. SURVEILLER les accès aux fichiers (lecture, écriture, ouverture...)     │
-│  2. BLOQUER ou AUTORISER ces accès (antivirus, contrôle d'accès)            │
-│                                                                             │
-│  ┌────────────┐    événement     ┌────────────┐                             │
-│  │ Processus  │ ---------------> |  Kernel    │                             │
-│  │ (ex: vim)  │    open()        │  Linux     │                             │
-│  └────────────┘                  └─────┬──────┘                             │
-│                                        │                                    │
-│                                        │ notification                       │
-│                                        ▼                                    │
-│                                  ┌────────────┐                             │
-│                                  │ Votre HIDS │                             │
-│                                  │ (fanotify) │                             │
-│                                  └────────────┘                             │
-│                                                                             │
-│  Cas d'usage typiques :                                                     │
-│  • Antivirus (scanner les fichiers à l'ouverture)                           │
-│  • HIDS (détecter les modifications suspectes)                              │
-│  • Audit (journaliser les accès)                                            │
-│  • DLP (Data Loss Prevention)                                               │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           QU'EST-CE QUE FANOTIFY ?                       │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  fanotify = "File Access NOTIFication"                                   │
+│                                                                          │
+│  C'est une API du noyau Linux (depuis 2.6.37) qui permet à un programme  │
+│  en espace utilisateur de :                                              │
+│                                                                          │
+│  1. SURVEILLER les accès aux fichiers (lecture, écriture, ouverture...)  │
+│  2. BLOQUER ou AUTORISER ces accès (antivirus, contrôle d'accès)         │
+│                                                                          │
+│  ┌────────────┐    événement     ┌────────────┐                          │
+│  │ Processus  │ ---------------> |  Kernel    │                          │
+│  │ (ex: vim)  │    open()        │  Linux     │                          │
+│  └────────────┘                  └─────┬──────┘                          │
+│                                        │                                 │
+│                                        │ notification                    │ 
+│                                        ▼                                 │
+│                                  ┌────────────┐                          │
+│                                  │ Votre HIDS │                          │
+│                                  │ (fanotify) │                          │
+│                                  └────────────┘                          │
+│                                                                          │
+│  Cas d'usage typiques :                                                  │
+│  • Antivirus (scanner les fichiers à l'ouverture)                        │
+│  • HIDS (détecter les modifications suspectes)                           │
+│  • Audit (journaliser les accès)                                         │
+│  • DLP (Data Loss Prevention)                                            │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 2.2 Deux modes de fonctionnement
@@ -1263,51 +1263,51 @@ explicit_bzero(password, sizeof(password));
 # PARTIE 6 : Référence Rapide
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                 AIDE-MÉMOIRE FANOTIFY                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  INITIALISATION                                                 │
-│  ─────────────────────────────────────────────────────────────  │
-│  int fd = fanotify_init(flags, event_f_flags);                 │
-│                                                                 │
-│  FLAGS COURANTS:                                                │
-│  • FAN_CLASS_NOTIF    - Mode notification                      │
-│  • FAN_CLASS_CONTENT  - Mode permission                        │
-│  • FAN_CLOEXEC        - Ferme sur exec()                       │
-│  • FAN_NONBLOCK       - Non bloquant                           │
-│                                                                 │
-│  MARQUAGE                                                       │
-│  ─────────────────────────────────────────────────────────────  │
-│  fanotify_mark(fd, flags, mask, AT_FDCWD, path);               │
-│                                                                 │
-│  FLAGS:                                                         │
-│  • FAN_MARK_ADD       - Ajoute                                 │
-│  • FAN_MARK_REMOVE    - Retire                                 │
-│  • FAN_MARK_MOUNT     - Point de montage                       │
-│  • FAN_MARK_IGNORED_MASK - Whitelist                           │
-│                                                                 │
-│  ÉVÉNEMENTS:                                                    │
-│  • FAN_OPEN, FAN_MODIFY, FAN_CLOSE_WRITE                       │
-│  • FAN_OPEN_PERM, FAN_ACCESS_PERM (permission)                 │
-│                                                                 │
-│  LECTURE                                                        │
-│  ─────────────────────────────────────────────────────────────  │
-│  char buf[8192];                                               │
-│  ssize_t len = read(fd, buf, sizeof(buf));                     │
-│  struct fanotify_event_metadata *ev = (void*)buf;              │
-│  while (FAN_EVENT_OK(ev, len)) {                               │
-│      /* ev->mask, ev->fd, ev->pid */                           │
-│      close(ev->fd);  /* NE PAS OUBLIER */                      │
-│      ev = FAN_EVENT_NEXT(ev, len);                             │
-│  }                                                              │
-│                                                                 │
-│  RÉPONSE PERMISSION                                             │
-│  ─────────────────────────────────────────────────────────────  │
-│  struct fanotify_response resp;                                │
-│  resp.fd = ev->fd;                                             │
-│  resp.response = FAN_ALLOW; /* ou FAN_DENY */                  │
-│  write(fd, &resp, sizeof(resp));                               │
+┌──────────────────────────────────────────────────────┐
+│                 AIDE-MÉMOIRE FANOTIFY                │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  INITIALISATION                                      │
+│  ────────────────────────────────────────────────────│
+│  int fd = fanotify_init(flags, event_f_flags);       │
+│                                                      │
+│  FLAGS COURANTS:                                     │
+│  • FAN_CLASS_NOTIF    - Mode notification            │
+│  • FAN_CLASS_CONTENT  - Mode permission              │
+│  • FAN_CLOEXEC        - Ferme sur exec()             │
+│  • FAN_NONBLOCK       - Non bloquant                 │
+│                                                      │
+│  MARQUAGE                                            │
+│  ────────────────────────────────────────────────────│
+│  fanotify_mark(fd, flags, mask, AT_FDCWD, path);     │
+│                                                      │
+│  FLAGS:                                              │
+│  • FAN_MARK_ADD       - Ajoute                       │
+│  • FAN_MARK_REMOVE    - Retire                       │
+│  • FAN_MARK_MOUNT     - Point de montage             │
+│  • FAN_MARK_IGNORED_MASK - Whitelist                 │
+│                                                      │
+│  ÉVÉNEMENTS:                                         │
+│  • FAN_OPEN, FAN_MODIFY, FAN_CLOSE_WRITE             │
+│  • FAN_OPEN_PERM, FAN_ACCESS_PERM (permission)       │
+│                                                      │
+│  LECTURE                                             │
+│  ────────────────────────────────────────────────────│
+│  char buf[8192];                                     │
+│  ssize_t len = read(fd, buf, sizeof(buf));           │
+│  struct fanotify_event_metadata *ev = (void*)buf;    │
+│  while (FAN_EVENT_OK(ev, len)) {                     │
+│      /* ev->mask, ev->fd, ev->pid */                 │
+│      close(ev->fd);  /* NE PAS OUBLIER */            │
+│      ev = FAN_EVENT_NEXT(ev, len);                   │
+│  }                                                   │
+│                                                      │
+│  RÉPONSE PERMISSION                                  │
+│  ────────────────────────────────────────────────────│
+│  struct fanotify_response resp;                      │
+│  resp.fd = ev->fd;                                   │
+│  resp.response = FAN_ALLOW; /* ou FAN_DENY */        │
+│  write(fd, &resp, sizeof(resp));                     │
 │                                                      │
 │  CHEMIN DEPUIS FD                                    │
 │  ────────────────────────────────────────────────────│
@@ -1325,7 +1325,7 @@ explicit_bzero(password, sizeof(password));
 
 ## Codes d'erreur courants
 
-| ERRNO    | Signification                              |
+| ERRNO    | Signification                             |
 |----------|-------------------------------------------|
 | EPERM    | Pas les privilèges (besoin root)          |
 | ENOSYS   | fanotify non supporté par le kernel       |
